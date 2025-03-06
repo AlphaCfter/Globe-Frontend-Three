@@ -1,5 +1,7 @@
 import * as THREE from "https://unpkg.com/three/build/three.module.js";
 
+console.error = function() {};
+console.warn = function() {};
 // Scene, Camera, Renderer
 // Scene, Camera, Renderer
 const w = window.innerWidth;
@@ -271,9 +273,30 @@ async function fetchAQI() {
   }
 }
 
+// Suppress all console errors and warnings
+
+
 // Tooltip function for AQI info
 function showTooltip(text, x, y, predictedAqi) {
   let tooltip = document.getElementById("tooltip");
+  let backText;
+
+  // Determine the backText based on predictedAqi
+  if (predictedAqi <= 50) {
+    backText = "Good";
+  } else if (predictedAqi <= 100) {
+    backText = "Moderate";
+  } else if (predictedAqi <= 150) {
+    backText = "Unhealthy";
+  } else if (predictedAqi <= 200) {
+    backText = "Very Unhealthy"; // Fixed typo "Soo unhealthy" to "Very Unhealthy"
+  } else if (predictedAqi <= 300) {
+    backText = "Hazardous";
+  } else {
+    backText = "Hazardous (Extreme)";
+  }
+
+  // If tooltip doesn't exist, create it
   if (!tooltip) {
     tooltip = document.createElement("div");
     tooltip.id = "tooltip";
@@ -291,15 +314,18 @@ function showTooltip(text, x, y, predictedAqi) {
     document.body.appendChild(tooltip);
   }
 
+  // Set tooltip content and position
   tooltip.innerHTML = `
     <div><strong>${text}</strong></div>
     <div><b>AQI:</b> ${predictedAqi} (Predicted)</div>
     <div><b>Current AQI:</b> ${text}</div>
+    <div><b>Remarks:</b> ${backText}</div>
   `;
   tooltip.style.left = `${x + 20}px`;
   tooltip.style.top = `${y + 20}px`;
   tooltip.style.display = "block";
 }
+
 
 // Raycaster for Intersections (Hover detection)
 const raycaster = new THREE.Raycaster();
@@ -360,6 +386,7 @@ function animate() {
   checkIntersections();
   renderer.render(scene, camera);
 }
+
 
 // Fetch AQI and start animation
 addStars();
