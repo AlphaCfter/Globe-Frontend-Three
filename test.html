@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AQI Globe Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three-globe/2.25.0/ThreeGlobe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
+</head>
+<body>
+    <script>
+        let scene, camera, renderer, globe;
+        const API_KEY = "YOUR_API_KEY"; // Replace with your AQI API key
+        const AQI_URL = "https://api.waqi.info/feed/";
+
+        // Initialize Scene
+        function initScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 300;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Add Globe
+            globe = new ThreeGlobe()
+                .globeImageUrl("//unpkg.com/three-globe/example/img/earth-blue-marble.jpg")
+                .bumpImageUrl("//unpkg.com/three-globe/example/img/earth-topology.png");
+
+            scene.add(globe);
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        // Fetch AQI Data
+        async function fetchAQIData(city) {
+            try {
+                const response = await fetch(`${AQI_URL}${city}/?token=${API_KEY}`);
+                const data = await response.json();
+                if (data.status === "ok") {
+                    return { lat: data.data.city.geo[0], lon: data.data.city.geo[1], aqi: data.data.aqi };
+                }
+            } catch (error) {
+                console.error("Error fetching AQI for", city, error);
+            }
+            return null;
+        }
+
+        // Add Marker
+        function addAQIMarker(lat, lon, aqi) {
+            const color = aqi < 50 ? "green" : aqi < 100 ? "yellow" : "red";
+            const marker = new THREE.Mesh(
+                new THREE.SphereGeometry(2, 16, 16),
+                new THREE.MeshBasicMaterial({ color })
+            );
+
+            const { x, y, z } = latLonToVector3(lat, lon, 150);
+            marker.position.set(x, y, z);
+            scene.add(marker);
+        }
+
+        // Convert Lat/Lon to 3D Coordinates
+        function latLonToVector3(lat, lon, radius) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+            return {
+                x: -radius * Math.sin(phi) * Math.cos(theta),
+                y: radius * Math.cos(phi),
+                z: radius * Math.sin(phi) * Math.sin(theta),
+            };
+        }
+
+        // Load AQI Data for Cities
+        async function loadAQIData() {
+            const cities = ["London", "New York", "Delhi", "Beijing", "Tokyo"];
+            const promises = cities.map(city => fetchAQIData(city));
+            const results = await Promise.all(promises);
+            
+            results.forEach(data => {
+                if (data) addAQIMarker(data.lat, data.lon, data.aqi);
+            });
+        }
+
+        // Handle Window Resize
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize Everything
+        initScene();
+        loadAQIData();
+    </script>
+</body>
+</html>

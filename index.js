@@ -132,7 +132,8 @@ async function fetchAQI() {
   infoDiv.style.padding = "10px";
   infoDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
   infoDiv.style.borderRadius = "5px";
-  infoDiv.innerHTML = "Loading AQI data...";
+  infoDiv.innerHTML = "Loading AQI data ⏳";
+  infoDiv.innerHTML = "Populating seeds 🌱";
   document.body.appendChild(infoDiv);
   
   try {
@@ -170,7 +171,7 @@ async function fetchAQI() {
     }
     
     // Update info div with data count
-    infoDiv.innerHTML = `Showing AQI data for ${cityMarkers.length} locations`;
+    infoDiv.innerHTML = `Showing AQI data for ${cityMarkers.length} locations ✔️`;
     
     // Auto-hide info div after 5 seconds
     setTimeout(() => {
@@ -183,6 +184,25 @@ async function fetchAQI() {
     infoDiv.innerHTML = "Error loading AQI data. Please check console.";
   }
 }
+
+async function loadText() {
+  // Create a div for displaying information
+  const infoDiv = document.createElement("div");
+  infoDiv.style.position = "absolute";
+  infoDiv.style.top = "400px";
+  infoDiv.style.left = "30px";
+  infoDiv.style.color = "white";
+  infoDiv.style.fontFamily = "Roboto, sans-serif";
+  infoDiv.style.fontSize = "48px"
+  infoDiv.style.padding = "20px";
+  infoDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+  infoDiv.style.borderRadius = "5px";
+  infoDiv.innerHTML = "How clean is your Air?";
+  document.body.appendChild(infoDiv);
+}
+
+
+
 
 // Add mouse interaction
 const raycaster = new THREE.Raycaster();
@@ -272,7 +292,7 @@ window.addEventListener('mousemove', onMouseMove, false);
 
 // Call the fetch function
 fetchAQI();
-
+loadText();
 // Controls for interactivity
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
