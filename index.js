@@ -185,6 +185,33 @@ async function loadLegend() {
   document.body.appendChild(infoDiv);
 }
 
+function addStars() {
+  const starGeometry = new THREE.BufferGeometry();
+  const starCount = 10000; // Number of stars
+  const positions = new Float32Array(starCount * 3); // Store positions in 3D space
+  
+  // Generate random positions for the stars
+  for (let i = 0; i < starCount; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 1000;  // X position
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 1000;  // Y position
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 1000;  // Z position
+  }
+
+  // Set the positions attribute for the star field
+  starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  // Create a material for the stars
+  const starMaterial = new THREE.PointsMaterial({
+    color: 0xffffff, // White color
+    size: 0.5, // Size of the stars
+    opacity: 0.8, // Slight transparency to make them glow
+    transparent: true, // Enable transparency
+  });
+
+  // Create the points system (stars) and add it to the scene
+  const starField = new THREE.Points(starGeometry, starMaterial);
+  scene.add(starField);
+}
 
 // Update AQI loading div
 async function fetchAQI() {
@@ -335,6 +362,7 @@ function animate() {
 }
 
 // Fetch AQI and start animation
+addStars();
 fetchAQI();
 loadText();
 loadLegend();
