@@ -68,10 +68,7 @@ function createAQIMarker(lat, lon, aqi, name) {
   const lineLength = 0.1 + (aqi / 500) * 0.5; // Scale line length by AQI value
   const lineEnd = markerPosition.clone().normalize().multiplyScalar(1.2 + lineLength);
   
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-    markerPosition,
-    lineEnd
-  ]);
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints([markerPosition, lineEnd]);
   const lineMaterial = new THREE.LineBasicMaterial({ color: getAQIColor(aqi), linewidth: 2 });
   const line = new THREE.Line(lineGeometry, lineMaterial);
   aqiGroup.add(line);
@@ -122,7 +119,6 @@ const cityMarkers = [];
 
 // Fetch AQI Data and Display Markers
 async function fetchAQI() {
-  // Create a div for displaying information
   const infoDiv = document.createElement("div");
   infoDiv.style.position = "absolute";
   infoDiv.style.top = "10px";
@@ -133,130 +129,101 @@ async function fetchAQI() {
   infoDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
   infoDiv.style.borderRadius = "5px";
   infoDiv.innerHTML = "Loading AQI data ⏳";
-  infoDiv.innerHTML = "Populating seeds 🌱";
   document.body.appendChild(infoDiv);
-  
+
   try {
-    // Fetch data for each city
     for (const city of cities) {
       const apiUrl = `https://api.waqi.info/feed/${city.name}/?token=13e3aa3f23da810e017dc0bad2d529646730f4ed`;
-      
+
       try {
         const response = await fetch(apiUrl);
         const data = await response.json();
-        
+
         if (data.status === "ok") {
           const aqi = data.data.aqi;
           const marker = createAQIMarker(city.lat, city.lon, aqi, city.name);
           cityMarkers.push({ ...marker, data: { name: city.name, aqi } });
-          console.log(`${city.name}: AQI = ${aqi}`);
         } else {
-          console.error(`Error fetching data for ${city.name}:`, data.data);
-          // Create marker with dummy data if API fails
           const dummyAqi = Math.floor(Math.random() * 200) + 20; // Random AQI between 20-220
           const marker = createAQIMarker(city.lat, city.lon, dummyAqi, city.name);
           cityMarkers.push({ ...marker, data: { name: city.name, aqi: dummyAqi } });
-          console.log(`Using dummy data for ${city.name}: AQI = ${dummyAqi}`);
         }
       } catch (cityError) {
-        console.error(`Failed to fetch data for ${city.name}:`, cityError);
-        // Create marker with dummy data if fetch fails
         const dummyAqi = Math.floor(Math.random() * 200) + 20; // Random AQI between 20-220
         const marker = createAQIMarker(city.lat, city.lon, dummyAqi, city.name);
         cityMarkers.push({ ...marker, data: { name: city.name, aqi: dummyAqi } });
-        console.log(`Using dummy data for ${city.name}: AQI = ${dummyAqi}`);
       }
       
       await new Promise(resolve => setTimeout(resolve, 300));
     }
-    
-    // Update info div with data count
+
     infoDiv.innerHTML = `Showing AQI data for ${cityMarkers.length} locations ✔️`;
-    
-    // Auto-hide info div after 5 seconds
+
     setTimeout(() => {
       infoDiv.style.opacity = "0";
       infoDiv.style.transition = "opacity 1s ease-in-out";
     }, 5000);
-    
+
   } catch (error) {
-    console.error("Error fetching AQI data:", error);
     infoDiv.innerHTML = "Error loading AQI data. Please check console.";
   }
 }
 
-async function loadText() {
-  // Create a div for displaying information
-  const infoDiv = document.createElement("div");
-  infoDiv.style.position = "absolute";
-  infoDiv.style.top = "400px";
-  infoDiv.style.left = "30px";
-  infoDiv.style.color = "white";
-  infoDiv.style.fontFamily = "Roboto, sans-serif";
-  infoDiv.style.fontSize = "48px"
-  infoDiv.style.padding = "20px";
-  infoDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
-  infoDiv.style.borderRadius = "5px";
-  infoDiv.innerHTML = "How clean is your Air?";
-  document.body.appendChild(infoDiv);
-}
-
-
-
-
-// Add mouse interaction
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-function onMouseMove(event) {
-  // Calculate mouse position in normalized device coordinates
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-}
-
-function showTooltip(text, x, y) {
+// Tooltip Function for AQI info
+function showTooltip(text, x, y, predictedAqi) {
   let tooltip = document.getElementById("tooltip");
   if (!tooltip) {
     tooltip = document.createElement("div");
     tooltip.id = "tooltip";
     tooltip.style.position = "absolute";
-    tooltip.style.padding = "10px";
-    tooltip.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    tooltip.style.padding = "20px";
+    tooltip.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
     tooltip.style.color = "white";
-    tooltip.style.borderRadius = "5px";
-    tooltip.style.pointerEvents = "none";
+    tooltip.style.borderRadius = "10px";
     tooltip.style.fontFamily = "Arial, sans-serif";
-    tooltip.style.fontSize = "14px";
+    tooltip.style.fontSize = "16px";
+    tooltip.style.maxWidth = "250px"; // Limit width of the card
+    tooltip.style.pointerEvents = "none";
     tooltip.style.zIndex = "1000";
+    tooltip.style.boxShadow = "0px 4px 10px rgba(0, 0, 0, 0.6)";
     document.body.appendChild(tooltip);
   }
-  
-  tooltip.innerHTML = text;
+
+  tooltip.innerHTML = `
+    <div><strong>${text}</strong></div>
+    <div><b>AQI:</b> ${predictedAqi} (Predicted)</div>
+    <div><b>Current AQI:</b> ${text}</div>
+  `;
   tooltip.style.left = `${x + 20}px`;
-  tooltip.style.top = `${y}px`;
+  tooltip.style.top = `${y + 20}px`;
   tooltip.style.display = "block";
 }
 
-function hideTooltip() {
-  const tooltip = document.getElementById("tooltip");
-  if (tooltip) {
-    tooltip.style.display = "none";
-  }
-}
-
-// Variable to track currently hovered marker
+// Raycaster for Intersections (Hover detection)
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
 let hoveredMarker = null;
 
-function checkIntersections() {
+// Update mouse position for raycasting
+window.addEventListener("mousemove", (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Check intersections immediately after the mouse move
+  checkIntersections(event);
+});
+
+// Raycast to detect intersections and show tooltip
+function checkIntersections(event) {
   // Update the picking ray with the camera and mouse position
   raycaster.setFromCamera(mouse, camera);
-  
+
   // Get all tip objects
   const tipObjects = cityMarkers.map(cityMarker => cityMarker.tip);
-  
+
   // Calculate intersections
   const intersects = raycaster.intersectObjects(tipObjects);
-  
+
   // Reset previously hovered marker if exists
   if (hoveredMarker && (!intersects.length || intersects[0].object !== hoveredMarker)) {
     // Reset marker size
@@ -264,91 +231,44 @@ function checkIntersections() {
     hoveredMarker = null;
     hideTooltip();
   }
-  
+
   if (intersects.length > 0) {
     const intersected = intersects[0].object;
     const { name, aqi } = intersected.userData;
-    
-    // Get AQI category
-    let category;
-    if (aqi <= 50) category = "Good";
-    else if (aqi <= 100) category = "Moderate";
-    else if (aqi <= 150) category = "Unhealthy for Sensitive Groups";
-    else if (aqi <= 200) category = "Unhealthy";
-    else if (aqi <= 300) category = "Very Unhealthy";
-    else category = "Hazardous";
-    
+
     // Highlight current marker if not already highlighted
     if (hoveredMarker !== intersected) {
-      intersected.scale.set(1.5, 1.5, 1.5);
+      intersected.scale.set(1.5, 1.5, 1);
       hoveredMarker = intersected;
     }
-    
-    showTooltip(`${name}<br>AQI: ${aqi} (${category})`, event.clientX, event.clientY);
+
+    // Placeholder for predicted AQI (for now, use the same value as current AQI)
+    const predictedAqi = aqi;
+
+    // Show the tooltip with the AQI information
+    showTooltip(name, event.clientX, event.clientY, predictedAqi);
   }
 }
 
-window.addEventListener('mousemove', onMouseMove, false);
-
-// Call the fetch function
-fetchAQI();
-loadText();
-// Controls for interactivity
-let isDragging = false;
-let previousMousePosition = { x: 0, y: 0 };
-
-function onMouseDown(event) {
-  isDragging = true;
-  previousMousePosition = {
-    x: event.clientX,
-    y: event.clientY
-  };
+// Hide tooltip
+function hideTooltip() {
+  const tooltip = document.getElementById("tooltip");
+  if (tooltip) tooltip.style.display = "none";
 }
 
-function onMouseUp() {
-  isDragging = false;
-}
-
-function onMouseDrag(event) {
-  if (isDragging) {
-    const deltaMove = {
-      x: event.clientX - previousMousePosition.x,
-      y: event.clientY - previousMousePosition.y
-    };
-    
-    earthGroup.rotation.y += deltaMove.x * 0.005;
-    earthGroup.rotation.x += deltaMove.y * 0.005;
-    
-    previousMousePosition = {
-      x: event.clientX,
-      y: event.clientY
-    };
-  }
-}
-
-window.addEventListener('mousedown', onMouseDown, false);
-window.addEventListener('mouseup', onMouseUp, false);
-window.addEventListener('mousemove', onMouseDrag, false);
-
-// Animate Scene
+// Main render loop
 function animate() {
   requestAnimationFrame(animate);
-  
-  // Only auto-rotate when not being dragged
-  if (!isDragging) {
-    earthGroup.rotation.y += 0.002; // Original rotation speed
-  }
-  
-  // Check for marker intersections
+
+  // Rotate the earth
+  earthGroup.rotation.y += 0.001;
+
+  // Perform raycasting to detect intersections
   checkIntersections();
-  
+
+  // Render the scene
   renderer.render(scene, camera);
 }
-animate();
 
-// Resize Handling
-window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}, false);
+fetchAQI();
+animate();
