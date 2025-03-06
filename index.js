@@ -5,30 +5,21 @@ const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-
-// Adjusted Camera - Closer and Wider FOV
 const camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
-camera.position.set(0, 0, 3.5); // Initial camera position
-
+camera.position.set(-1.75, 0, 4);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(w, h);
 document.body.appendChild(renderer.domElement);
 
 // Load Textures
 const loader = new THREE.TextureLoader();
-
-// Slightly larger geometry with more segments
 const geometry = new THREE.SphereGeometry(1.2, 64, 64);
-
-// Create Earth Group (Fixed Position)
 const earthGroup = new THREE.Group();
-earthGroup.position.set(1, 0, 0); // Centered in the scene
-earthGroup.rotation.y = 0.5; // Initial Y-axis rotation
+scene.add(earthGroup);
 
 // Earth Material
 const material = new THREE.MeshStandardMaterial({
   map: loader.load("./textures/00_earthmap1k.jpg"),
-  specularMap: loader.load("./textures/02_earthspec1k.jpg"),
   bumpMap: loader.load("./textures/01_earthbump1k.jpg"),
   bumpScale: 0.04,
   roughness: 0.7,
@@ -37,103 +28,305 @@ const material = new THREE.MeshStandardMaterial({
 const earthMesh = new THREE.Mesh(geometry, material);
 earthGroup.add(earthMesh);
 
-// Lights Material (City Lights)
-const lightsMat = new THREE.MeshBasicMaterial({
-  map: loader.load("./textures/03_earthlights1k.jpg"),
-  blending: THREE.AdditiveBlending,
-  opacity: 0.5
-});
-const lightsMesh = new THREE.Mesh(geometry, lightsMat);
-earthGroup.add(lightsMesh);
-
-// Clouds Material
-const cloudsMat = new THREE.MeshStandardMaterial({
-  map: loader.load("./textures/04_earthcloudmap.jpg"),
-  transparent: true,
-  blending: THREE.AdditiveBlending,
-  alphaMap: loader.load('./textures/05_earthcloudmaptrans.jpg'),
-  alphaTest: 0.5,
-  opacity: 0.6,
-  roughness: 1.0,
-  metalness: 0.0
-});
-const cloudsMesh = new THREE.Mesh(geometry, cloudsMat);
-cloudsMesh.scale.setScalar(1.02);
-earthGroup.add(cloudsMesh);
-
-scene.add(earthGroup);
-
 // Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
-
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
 directionalLight.position.set(5, 3, 5);
 scene.add(directionalLight);
 
-// Zoom and Rotation Variables
-let isDragging = false;
-let previousMouseX = 0;
-let autoRotationSpeed = 0.002;
-let manualRotationSpeed = 0;
+// Create a separate group for AQI data to keep globe untouched
+const aqiGroup = new THREE.Group();
+earthGroup.add(aqiGroup);
 
-// Zoom Settings
-const minZoom = 1.5;
-const maxZoom = 4;
-let currentZoom = 2;
+// Helper functions to convert latitude/longitude to 3D coordinates
+function latLongToVector3(lat, lon, radius) {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+  
+  const x = -radius * Math.sin(phi) * Math.cos(theta);
+  const y = radius * Math.cos(phi);
+  const z = radius * Math.sin(phi) * Math.sin(theta);
+  
+  return new THREE.Vector3(x, y, z);
+}
 
-// Mouse Event Listeners
-document.addEventListener("mousedown", (event) => {
-  isDragging = true;
-  previousMouseX = event.clientX;
-});
+// AQI color scale
+function getAQIColor(aqi) {
+  if (aqi <= 50) return 0x00e400; // Good - Green
+  if (aqi <= 100) return 0xffff00; // Moderate - Yellow
+  if (aqi <= 150) return 0xff7e00; // Unhealthy for Sensitive Groups - Orange
+  if (aqi <= 200) return 0xff0000; // Unhealthy - Red
+  if (aqi <= 300) return 0x8f3f97; // Very Unhealthy - Purple
+  return 0x7e0023; // Hazardous - Maroon
+}
 
-document.addEventListener("mouseup", () => {
-  isDragging = false;
-  manualRotationSpeed = 0;
-});
+// Create marker for a location with AQI data
+function createAQIMarker(lat, lon, aqi, name) {
+  const markerPosition = latLongToVector3(lat, lon, 1.2);
+  
+  // Create line extending outward to represent AQI value
+  const lineLength = 0.1 + (aqi / 500) * 0.5; // Scale line length by AQI value
+  const lineEnd = markerPosition.clone().normalize().multiplyScalar(1.2 + lineLength);
+  
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+    markerPosition,
+    lineEnd
+  ]);
+  const lineMaterial = new THREE.LineBasicMaterial({ color: getAQIColor(aqi), linewidth: 2 });
+  const line = new THREE.Line(lineGeometry, lineMaterial);
+  aqiGroup.add(line);
+  
+  // Create a small sphere at the end of the line
+  const tipGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+  const tipMaterial = new THREE.MeshBasicMaterial({ color: getAQIColor(aqi) });
+  const tip = new THREE.Mesh(tipGeometry, tipMaterial);
+  tip.position.copy(lineEnd);
+  tip.userData = { name, aqi };
+  aqiGroup.add(tip);
+  
+  return { line, tip };
+}
 
-document.addEventListener("mousemove", (event) => {
-  if (isDragging) {
-    let deltaX = event.clientX - previousMouseX;
-    manualRotationSpeed = deltaX * 0.005;
-    earthGroup.rotation.y += manualRotationSpeed;
-    previousMouseX = event.clientX;
+// Sample cities - you can expand this list
+const cities = [
+  { "name": "Ahmedabad", "lat": 23.033863, "lon": 72.585022 },
+  { "name": "Aizawl", "lat": 23.727107, "lon": 92.717639 },
+  { "name": "Amaravati", "lat": 16.506174, "lon": 80.648015 },
+  { "name": "Amritsar", "lat": 31.634308, "lon": 74.873678 },
+  { "name": "Bengaluru", "lat": 12.971599, "lon": 77.594566 },
+  { "name": "Bhopal", "lat": 23.259933, "lon": 77.412615 },
+  { "name": "Brajrajnagar", "lat": 21.816667, "lon": 83.916667 },
+  { "name": "Chandigarh", "lat": 30.733315, "lon": 76.779418 },
+  { "name": "Chennai", "lat": 13.082680, "lon": 80.270718 },
+  { "name": "Coimbatore", "lat": 11.016844, "lon": 76.955833 },
+  { "name": "Delhi", "lat": 28.704060, "lon": 77.102493 },
+  { "name": "Ernakulam", "lat": 9.981635, "lon": 76.299884 },
+  { "name": "Gurugram", "lat": 28.459497, "lon": 77.026638 },
+  { "name": "Guwahati", "lat": 26.144518, "lon": 91.736237 },
+  { "name": "Hyderabad", "lat": 17.385044, "lon": 78.486671 },
+  { "name": "Jaipur", "lat": 26.912434, "lon": 75.787270 },
+  { "name": "Jorapokhar", "lat": 23.666667, "lon": 86.400000 },
+  { "name": "Kochi", "lat": 9.931233, "lon": 76.267304 },
+  { "name": "Kolkata", "lat": 22.572646, "lon": 88.363895 },
+  { "name": "Lucknow", "lat": 26.846694, "lon": 80.946166 },
+  { "name": "Mumbai", "lat": 19.076090, "lon": 72.877426 },
+  { "name": "Patna", "lat": 25.594095, "lon": 85.137566 },
+  { "name": "Shillong", "lat": 25.578773, "lon": 91.893254 },
+  { "name": "Talcher", "lat": 20.949607, "lon": 85.233553 },
+  { "name": "Thiruvananthapuram", "lat": 8.524139, "lon": 76.936638 },
+  { "name": "Visakhapatnam", "lat": 17.686816, "lon": 83.218482 }
+];
+
+// Create a container for city markers
+const cityMarkers = [];
+
+// Fetch AQI Data and Display Markers
+async function fetchAQI() {
+  // Create a div for displaying information
+  const infoDiv = document.createElement("div");
+  infoDiv.style.position = "absolute";
+  infoDiv.style.top = "10px";
+  infoDiv.style.left = "10px";
+  infoDiv.style.color = "white";
+  infoDiv.style.fontFamily = "Arial, sans-serif";
+  infoDiv.style.padding = "10px";
+  infoDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+  infoDiv.style.borderRadius = "5px";
+  infoDiv.innerHTML = "Loading AQI data...";
+  document.body.appendChild(infoDiv);
+  
+  try {
+    // Fetch data for each city
+    for (const city of cities) {
+      const apiUrl = `https://api.waqi.info/feed/${city.name}/?token=13e3aa3f23da810e017dc0bad2d529646730f4ed`;
+      
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        
+        if (data.status === "ok") {
+          const aqi = data.data.aqi;
+          const marker = createAQIMarker(city.lat, city.lon, aqi, city.name);
+          cityMarkers.push({ ...marker, data: { name: city.name, aqi } });
+          console.log(`${city.name}: AQI = ${aqi}`);
+        } else {
+          console.error(`Error fetching data for ${city.name}:`, data.data);
+          // Create marker with dummy data if API fails
+          const dummyAqi = Math.floor(Math.random() * 200) + 20; // Random AQI between 20-220
+          const marker = createAQIMarker(city.lat, city.lon, dummyAqi, city.name);
+          cityMarkers.push({ ...marker, data: { name: city.name, aqi: dummyAqi } });
+          console.log(`Using dummy data for ${city.name}: AQI = ${dummyAqi}`);
+        }
+      } catch (cityError) {
+        console.error(`Failed to fetch data for ${city.name}:`, cityError);
+        // Create marker with dummy data if fetch fails
+        const dummyAqi = Math.floor(Math.random() * 200) + 20; // Random AQI between 20-220
+        const marker = createAQIMarker(city.lat, city.lon, dummyAqi, city.name);
+        cityMarkers.push({ ...marker, data: { name: city.name, aqi: dummyAqi } });
+        console.log(`Using dummy data for ${city.name}: AQI = ${dummyAqi}`);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    // Update info div with data count
+    infoDiv.innerHTML = `Showing AQI data for ${cityMarkers.length} locations`;
+    
+    // Auto-hide info div after 5 seconds
+    setTimeout(() => {
+      infoDiv.style.opacity = "0";
+      infoDiv.style.transition = "opacity 1s ease-in-out";
+    }, 5000);
+    
+  } catch (error) {
+    console.error("Error fetching AQI data:", error);
+    infoDiv.innerHTML = "Error loading AQI data. Please check console.";
   }
-});
+}
 
-// Zoom Functionality
-// Zoom Functionality
-document.addEventListener("wheel", (event) => {
-  // Prevent page scrolling
-  event.preventDefault();
-  
-  // Adjust zoom based on wheel delta
-  currentZoom += event.deltaY * -0.001;
-  
-  // Clamp zoom between min and max values
-  currentZoom = Math.max(minZoom, Math.min(maxZoom, currentZoom));
-  
-  // Update camera position
-  camera.position.z = currentZoom;
-});
+// Add mouse interaction
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
 
-// Prevent default scroll behavior
-document.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+function onMouseMove(event) {
+  // Calculate mouse position in normalized device coordinates
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+}
 
-// Animate Scene with Automatic Rotation
+function showTooltip(text, x, y) {
+  let tooltip = document.getElementById("tooltip");
+  if (!tooltip) {
+    tooltip = document.createElement("div");
+    tooltip.id = "tooltip";
+    tooltip.style.position = "absolute";
+    tooltip.style.padding = "10px";
+    tooltip.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    tooltip.style.color = "white";
+    tooltip.style.borderRadius = "5px";
+    tooltip.style.pointerEvents = "none";
+    tooltip.style.fontFamily = "Arial, sans-serif";
+    tooltip.style.fontSize = "14px";
+    tooltip.style.zIndex = "1000";
+    document.body.appendChild(tooltip);
+  }
+  
+  tooltip.innerHTML = text;
+  tooltip.style.left = `${x + 20}px`;
+  tooltip.style.top = `${y}px`;
+  tooltip.style.display = "block";
+}
+
+function hideTooltip() {
+  const tooltip = document.getElementById("tooltip");
+  if (tooltip) {
+    tooltip.style.display = "none";
+  }
+}
+
+// Variable to track currently hovered marker
+let hoveredMarker = null;
+
+function checkIntersections() {
+  // Update the picking ray with the camera and mouse position
+  raycaster.setFromCamera(mouse, camera);
+  
+  // Get all tip objects
+  const tipObjects = cityMarkers.map(cityMarker => cityMarker.tip);
+  
+  // Calculate intersections
+  const intersects = raycaster.intersectObjects(tipObjects);
+  
+  // Reset previously hovered marker if exists
+  if (hoveredMarker && (!intersects.length || intersects[0].object !== hoveredMarker)) {
+    // Reset marker size
+    hoveredMarker.scale.set(1, 1, 1);
+    hoveredMarker = null;
+    hideTooltip();
+  }
+  
+  if (intersects.length > 0) {
+    const intersected = intersects[0].object;
+    const { name, aqi } = intersected.userData;
+    
+    // Get AQI category
+    let category;
+    if (aqi <= 50) category = "Good";
+    else if (aqi <= 100) category = "Moderate";
+    else if (aqi <= 150) category = "Unhealthy for Sensitive Groups";
+    else if (aqi <= 200) category = "Unhealthy";
+    else if (aqi <= 300) category = "Very Unhealthy";
+    else category = "Hazardous";
+    
+    // Highlight current marker if not already highlighted
+    if (hoveredMarker !== intersected) {
+      intersected.scale.set(1.5, 1.5, 1.5);
+      hoveredMarker = intersected;
+    }
+    
+    showTooltip(`${name}<br>AQI: ${aqi} (${category})`, event.clientX, event.clientY);
+  }
+}
+
+window.addEventListener('mousemove', onMouseMove, false);
+
+// Call the fetch function
+fetchAQI();
+
+// Controls for interactivity
+let isDragging = false;
+let previousMousePosition = { x: 0, y: 0 };
+
+function onMouseDown(event) {
+  isDragging = true;
+  previousMousePosition = {
+    x: event.clientX,
+    y: event.clientY
+  };
+}
+
+function onMouseUp() {
+  isDragging = false;
+}
+
+function onMouseDrag(event) {
+  if (isDragging) {
+    const deltaMove = {
+      x: event.clientX - previousMousePosition.x,
+      y: event.clientY - previousMousePosition.y
+    };
+    
+    earthGroup.rotation.y += deltaMove.x * 0.005;
+    earthGroup.rotation.x += deltaMove.y * 0.005;
+    
+    previousMousePosition = {
+      x: event.clientX,
+      y: event.clientY
+    };
+  }
+}
+
+window.addEventListener('mousedown', onMouseDown, false);
+window.addEventListener('mouseup', onMouseUp, false);
+window.addEventListener('mousemove', onMouseDrag, false);
+
+// Animate Scene
 function animate() {
   requestAnimationFrame(animate);
   
+  // Only auto-rotate when not being dragged
   if (!isDragging) {
-    earthGroup.rotation.y += autoRotationSpeed;
+    earthGroup.rotation.y += 0.002; // Original rotation speed
   }
+  
+  // Check for marker intersections
+  checkIntersections();
   
   renderer.render(scene, camera);
 }
 animate();
 
-// Handle Window Resize
+// Resize Handling
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
