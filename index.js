@@ -117,7 +117,28 @@ const cities = [
   { "name": "Shillong", "lat": 25.578773, "lon": 91.893254 },
   { "name": "Talcher", "lat": 20.949607, "lon": 85.233553 },
   { "name": "Thiruvananthapuram", "lat": 8.524139, "lon": 76.936638 },
-  { "name": "Visakhapatnam", "lat": 17.686816, "lon": 83.218482 }
+  { "name": "Visakhapatnam", "lat": 17.686816, "lon": 83.218482 },
+  { "name": "New York City", "lat": 40.712776, "lon": -74.005974 },
+  { "name": "London", "lat": 51.507351, "lon": -0.127758 },
+  { "name": "Tokyo", "lat": 35.676192, "lon": 139.650311 },
+  { "name": "Paris", "lat": 48.856613, "lon": 2.352222 },
+  { "name": "Sydney", "lat": -33.868820, "lon": 151.209290 },
+  { "name": "Berlin", "lat": 52.520008, "lon": 13.404954 },
+  { "name": "Rome", "lat": 41.902782, "lon": 12.496366 },
+  { "name": "Moscow", "lat": 55.755825, "lon": 37.617298 },
+  { "name": "Cape Town", "lat": -33.924869, "lon": 18.424055 },
+  { "name": "Dubai", "lat": 25.276987, "lon": 55.296249 },
+  { "name": "Rio de Janeiro", "lat": -22.906847, "lon": -43.172896 },
+  { "name": "Cairo", "lat": 30.044420, "lon": 31.235712 },
+  { "name": "Bangkok", "lat": 13.756331, "lon": 100.501765 },
+  { "name": "Mexico City", "lat": 19.432608, "lon": -99.133209 },
+  { "name": "Los Angeles", "lat": 34.052235, "lon": -118.243683 },
+  { "name": "Seoul", "lat": 37.566536, "lon": 126.977966 },
+  { "name": "Buenos Aires", "lat": -34.603684, "lon": -58.381559 },
+  { "name": "Toronto", "lat": 43.651070, "lon": -79.347015 },
+  { "name": "Lagos", "lat": 6.524379, "lon": 3.379206 },
+  { "name": "Istanbul", "lat": 41.008238, "lon": 28.978359 },
+  { "name": "Karachi", "lat": 24.860735, "lon": 67.001137 }
 ];
 
 // Create a container for city markers
@@ -140,6 +161,30 @@ async function loadText() {
 
   document.body.appendChild(infoDiv);
 }
+
+async function loadLegend() {
+  const infoDiv = document.createElement("div");
+  infoDiv.style.position = "absolute";
+  infoDiv.style.top = "650px";
+  infoDiv.style.left = "30px";
+  infoDiv.style.color = "white";
+  infoDiv.style.fontFamily = "Roboto, sans-serif";
+  infoDiv.style.fontSize = "20px";
+  infoDiv.style.padding = "20px";
+  infoDiv.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+  infoDiv.style.borderRadius = "5px";
+  infoDiv.innerHTML = 
+    `<div>Green: Clean Air🍃</div>
+    <div style="color: white;">Yellow: Moderate✨</div>
+    <div style="color: white;">Orange: Unhealthy for Sensitive Groups😷</div>
+    <div style="color: white;">Red: Unhealthy🤧</div>
+    <div style="color: white;">Purple: Very Unhealthy🚨</div>
+    <div style="color: white;">Maroon: Hazardous☠️</div>`;
+
+
+  document.body.appendChild(infoDiv);
+}
+
 
 // Update AQI loading div
 async function fetchAQI() {
@@ -292,5 +337,5 @@ function animate() {
 // Fetch AQI and start animation
 fetchAQI();
 loadText();
+loadLegend();
 animate();
-
