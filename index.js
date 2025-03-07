@@ -3,7 +3,6 @@ import * as THREE from "https://unpkg.com/three/build/three.module.js";
 console.error = function() {};
 const apiKey = '13e3aa3f23da810e017dc0bad2d529646730f4ed';
 // Scene, Camera, Renderer
-// Scene, Camera, Renderer
 const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
@@ -151,7 +150,7 @@ const cityMarkers = [];
 async function loadText() {
   const infoDiv = document.createElement("div");
   infoDiv.style.position = "absolute";
-  infoDiv.style.top = "400px";
+  infoDiv.style.top = "200px";
   infoDiv.style.left = "20px";
   infoDiv.style.color = "white";
   infoDiv.style.fontFamily = "Roboto, sans-serif";
@@ -167,7 +166,7 @@ async function loadText() {
 async function loadLegend() {
   const infoDiv = document.createElement("div");
   infoDiv.style.position = "absolute";
-  infoDiv.style.top = "550px";
+  infoDiv.style.top = "300px";
   infoDiv.style.left = "30px";
   infoDiv.style.color = "white";
   infoDiv.style.fontFamily = "Roboto, sans-serif";
@@ -332,7 +331,7 @@ function showTooltip(cityName, x, y, currentAqi) {
     <div style="padding-bottom: 10px;"><b>Remarks:</b> ${backText}</div>
     <div><b>Recommendation:</b> ${recom}</div>
   `;
-  tooltip.style.top = `750px`;
+  tooltip.style.top = `500px`;
   tooltip.style.left = `30px`;
   tooltip.style.display = "block";
   
