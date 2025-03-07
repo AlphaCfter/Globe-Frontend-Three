@@ -167,7 +167,7 @@ async function loadText() {
 async function loadLegend() {
   const infoDiv = document.createElement("div");
   infoDiv.style.position = "absolute";
-  infoDiv.style.top = "650px";
+  infoDiv.style.top = "550px";
   infoDiv.style.left = "30px";
   infoDiv.style.color = "white";
   infoDiv.style.fontFamily = "Roboto, sans-serif";
@@ -307,23 +307,27 @@ function showTooltip(text, x, y, predictedAqi) {
     tooltip.style.borderRadius = "10px";
     tooltip.style.fontFamily = "Arial, sans-serif";
     tooltip.style.fontSize = "16px";
-    tooltip.style.maxWidth = "250px"; // Limit width of the card
+    tooltip.style.maxWidth = "300px"; // Increase width of the box
     tooltip.style.pointerEvents = "none";
     tooltip.style.zIndex = "1000";
     tooltip.style.boxShadow = "0px 4px 10px rgba(0, 0, 0, 0.6)";
+    tooltip.style.border = "1px solid #ccc"; // Add border to the box
     document.body.appendChild(tooltip);
   }
-
+  
   // Set tooltip content and position
   tooltip.innerHTML = `
-    <div><strong>${text}</strong></div>
-    <div><b>AQI:</b> ${predictedAqi} (Predicted)</div>
-    <div><b>Current AQI:</b> ${text}</div>
+    <div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+      <strong>${text}</strong>
+    </div>
+    <div style="padding-bottom: 10px;"><b>AQI:</b> ${predictedAqi} (Predicted)</div>
+    <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${text}</div>
     <div><b>Remarks:</b> ${backText}</div>
   `;
-  tooltip.style.left = `${x + 20}px`;
-  tooltip.style.top = `${y + 20}px`;
+  tooltip.style.top = `750px`;
+  tooltip.style.left = `30px`;
   tooltip.style.display = "block";
+  
 }
 
 
@@ -333,13 +337,43 @@ const mouse = new THREE.Vector2();
 let hoveredMarker = null;
 
 // Update mouse position for raycasting
-window.addEventListener("mousemove", (event) => {
+// Update mouse position for raycasting on click, not on mousemove
+window.addEventListener("click", (event) => {
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
   checkIntersections(event);
 });
 
-// Raycast to detect intersections and show tooltip
+// Optional: Add a hover effect to indicate clickable points (without showing tooltip)
+window.addEventListener("mousemove", (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  highlightHoveredPoint(event);
+});
+
+// Function to just highlight points on hover without showing tooltip
+function highlightHoveredPoint() {
+  raycaster.setFromCamera(mouse, camera);
+  const tipObjects = cityMarkers.map(cityMarker => cityMarker.tip);
+  const intersects = raycaster.intersectObjects(tipObjects);
+  
+  // Reset hover effect on all points
+  cityMarkers.forEach(marker => {
+    if (marker.tip !== hoveredMarker) {
+      marker.tip.scale.set(1, 1, 1);
+    }
+  });
+  
+  if (intersects.length > 0) {
+    const intersected = intersects[0].object;
+    // Only apply hover effect if this isn't the currently selected point
+    if (intersected !== hoveredMarker) {
+      intersected.scale.set(1.2, 1.2, 1.2);
+    }
+  }
+}
+
+// Raycast to detect intersections and show tooltip on click
 function checkIntersections(event) {
   // Update the picking ray with the camera and mouse position
   raycaster.setFromCamera(mouse, camera);
@@ -350,40 +384,44 @@ function checkIntersections(event) {
   // Calculate intersections
   const intersects = raycaster.intersectObjects(tipObjects);
 
-  // Reset previously hovered marker if exists
-  if (hoveredMarker && (!intersects.length || intersects[0].object !== hoveredMarker)) {
-    // Reset marker size
+  // If we click on empty space, hide tooltip and deselect current marker
+  if (intersects.length === 0) {
+    if (hoveredMarker) {
+      hoveredMarker.scale.set(1, 1, 1);
+      hoveredMarker = null;
+      hideTooltip();
+    }
+    return;
+  }
+
+  const intersected = intersects[0].object;
+  const { name, aqi } = intersected.userData;
+
+  // If we click on the same marker again, hide tooltip and deselect
+  if (hoveredMarker === intersected) {
     hoveredMarker.scale.set(1, 1, 1);
     hoveredMarker = null;
     hideTooltip();
+    return;
   }
 
-  if (intersects.length > 0) {
-    const intersected = intersects[0].object;
-    const { name, aqi } = intersected.userData;
-
-    // Highlight current marker if not already highlighted
-    if (hoveredMarker !== intersected) {
-      intersected.scale.set(1.5, 1.5, 1);
-      hoveredMarker = intersected;
-    }
-
-    const predictedAqi = aqi;
-    showTooltip(name, event.clientX, event.clientY, predictedAqi);
+  // Reset previously selected marker if exists
+  if (hoveredMarker) {
+    hoveredMarker.scale.set(1, 1, 1);
   }
+
+  // Select and highlight new marker
+  intersected.scale.set(1.5, 1.5, 1.5);
+  hoveredMarker = intersected;
+
+  const predictedAqi = aqi;
+  showTooltip(name, event.clientX, event.clientY, predictedAqi);
 }
 
-// Hide tooltip
-function hideTooltip() {
-  const tooltip = document.getElementById("tooltip");
-  if (tooltip) tooltip.style.display = "none";
-}
-
-// Main render loop
+// Main render loop - no need to call checkIntersections here anymore
 function animate() {
   requestAnimationFrame(animate);
   earthGroup.rotation.y += 0.001;
-  checkIntersections();
   renderer.render(scene, camera);
 }
 
