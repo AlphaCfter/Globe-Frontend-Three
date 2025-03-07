@@ -1,7 +1,7 @@
 import * as THREE from "https://unpkg.com/three/build/three.module.js";
 
 console.error = function() {};
-console.warn = function() {};
+const apiKey = process.env.API_KEY;
 // Scene, Camera, Renderer
 // Scene, Camera, Renderer
 const w = window.innerWidth;
@@ -234,7 +234,7 @@ async function fetchAQI() {
   // Fetch AQI data for cities
   try {
     for (const city of cities) {
-      const apiUrl = `https://api.waqi.info/feed/${city.name}/?token=13e3aa3f23da810e017dc0bad2d529646730f4ed`;
+      const apiUrl = `https://api.waqi.info/feed/${city.name}/?token=${apiKey}`;
       
       try {
         const response = await fetch(apiUrl);
