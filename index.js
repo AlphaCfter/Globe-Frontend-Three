@@ -337,7 +337,7 @@ function showTooltip(cityName, x, y, currentAqi) {
   tooltip.style.display = "block";
   
   // Then fetch the predicted AQI
-  fetch(`https://aqi-predictor-emt4.onrender.com/predict/?city=${encodeURIComponent(cityName)}`)
+  fetch(`https://binary-brains-zunt.onrender.com/predict/?city=${encodeURIComponent(cityName)}`)
     .then(response => {
       if (!response.ok) {
         throw new Error("Network response was not ok");
