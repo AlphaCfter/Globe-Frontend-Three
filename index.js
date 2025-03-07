@@ -280,20 +280,27 @@ async function fetchAQI() {
 function showTooltip(cityName, x, y, currentAqi) {
   let tooltip = document.getElementById("tooltip");
   let backText;
+  let recom;
   
   // Determine the backText based on current AQI
   if (currentAqi <= 50) {
     backText = "Good";
+    recom = "Enjoy outdoor activities!";
   } else if (currentAqi <= 100) {
     backText = "Moderate";
+    recom = "Acceptable but still risky";
   } else if (currentAqi <= 150) {
     backText = "Unhealthy";
+    recom = "Sensitive for respiratory conditions";
   } else if (currentAqi <= 200) {
     backText = "Very Unhealthy";
+    recom = "Avoid outdoor activities as much as possible. Wear an N95 mask";
   } else if (currentAqi <= 300) {
     backText = "Hazardous";
+    recom = "Stay indoors, limit physical activity, and wear a high-quality mask (like N95) when going outside";
   } else {
     backText = "Hazardous (Extreme)";
+    recom = "Emergency health warnings in effect. Stay indoors and keep windows closed. If you must go outside, wear an N95 or P100 mask. Limit all outdoor activities.";
   }
 
   // If tooltip doesn't exist, create it
@@ -322,7 +329,8 @@ function showTooltip(cityName, x, y, currentAqi) {
     </div>
     <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${currentAqi}</div>
     <div style="padding-bottom: 10px;"><b>Predicted AQI:</b> Loading...</div>
-    <div><b>Remarks:</b> ${backText}</div>
+    <div style="padding-bottom: 10px;"><b>Remarks:</b> ${backText}</div>
+    <div><b>Recommendation:</b> ${recom}</div>
   `;
   tooltip.style.top = `750px`;
   tooltip.style.left = `30px`;
@@ -345,7 +353,8 @@ function showTooltip(cityName, x, y, currentAqi) {
         </div>
         <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${currentAqi}</div>
         <div style="padding-bottom: 10px;"><b>Predicted AQI:</b> ${predictedAqi}</div>
-        <div><b>Remarks:</b> ${backText}</div>
+        <div style="padding-bottom: 10px;"><b>Remarks:</b> ${backText}</div>
+        <div><b>Recommendation:</b> ${recom}</div>
       `;
     })
     .catch(error => {
@@ -356,7 +365,8 @@ function showTooltip(cityName, x, y, currentAqi) {
         </div>
         <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${currentAqi}</div>
         <div style="padding-bottom: 10px;"><b>Predicted AQI:</b> Failed to load</div>
-        <div><b>Remarks:</b> ${backText}</div>
+        <div style="padding-bottom: 10px;"><b>Remarks:</b> ${backText}</div>
+        <div><b>Recommendation:</b> ${recom}</div>
       `;
     });
 }
