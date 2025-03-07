@@ -277,20 +277,20 @@ async function fetchAQI() {
 
 
 // Tooltip function for AQI info
-function showTooltip(text, x, y, predictedAqi) {
+function showTooltip(cityName, x, y, currentAqi) {
   let tooltip = document.getElementById("tooltip");
   let backText;
-
-  // Determine the backText based on predictedAqi
-  if (predictedAqi <= 50) {
+  
+  // Determine the backText based on current AQI
+  if (currentAqi <= 50) {
     backText = "Good";
-  } else if (predictedAqi <= 100) {
+  } else if (currentAqi <= 100) {
     backText = "Moderate";
-  } else if (predictedAqi <= 150) {
+  } else if (currentAqi <= 150) {
     backText = "Unhealthy";
-  } else if (predictedAqi <= 200) {
-    backText = "Very Unhealthy"; // Fixed typo "Soo unhealthy" to "Very Unhealthy"
-  } else if (predictedAqi <= 300) {
+  } else if (currentAqi <= 200) {
+    backText = "Very Unhealthy";
+  } else if (currentAqi <= 300) {
     backText = "Hazardous";
   } else {
     backText = "Hazardous (Extreme)";
@@ -307,27 +307,58 @@ function showTooltip(text, x, y, predictedAqi) {
     tooltip.style.borderRadius = "10px";
     tooltip.style.fontFamily = "Arial, sans-serif";
     tooltip.style.fontSize = "16px";
-    tooltip.style.maxWidth = "300px"; // Increase width of the box
+    tooltip.style.maxWidth = "300px";
     tooltip.style.pointerEvents = "none";
     tooltip.style.zIndex = "1000";
     tooltip.style.boxShadow = "0px 4px 10px rgba(0, 0, 0, 0.6)";
-    tooltip.style.border = "1px solid #ccc"; // Add border to the box
+    tooltip.style.border = "1px solid #ccc";
     document.body.appendChild(tooltip);
   }
   
-  // Set tooltip content and position
+  // First show the tooltip with loading indicator
   tooltip.innerHTML = `
     <div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
-      <strong>${text}</strong>
+      <strong>${cityName}</strong>
     </div>
-    <div style="padding-bottom: 10px;"><b>AQI:</b> ${predictedAqi} (Predicted)</div>
-    <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${text}</div>
+    <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${currentAqi}</div>
+    <div style="padding-bottom: 10px;"><b>Predicted AQI:</b> Loading...</div>
     <div><b>Remarks:</b> ${backText}</div>
   `;
   tooltip.style.top = `750px`;
   tooltip.style.left = `30px`;
   tooltip.style.display = "block";
   
+  // Then fetch the predicted AQI
+  fetch(`https://aqi-predictor-emt4.onrender.com/predict/?city=${encodeURIComponent(cityName)}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Update the tooltip with the predicted AQI
+      const predictedAqi = data.predicted_aqi.toFixed(2);
+      tooltip.innerHTML = `
+        <div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+          <strong>${cityName}</strong>
+        </div>
+        <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${currentAqi}</div>
+        <div style="padding-bottom: 10px;"><b>Predicted AQI:</b> ${predictedAqi}</div>
+        <div><b>Remarks:</b> ${backText}</div>
+      `;
+    })
+    .catch(error => {
+      console.error("Error fetching predicted AQI:", error);
+      tooltip.innerHTML = `
+        <div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+          <strong>${cityName}</strong>
+        </div>
+        <div style="padding-bottom: 10px;"><b>Current AQI:</b> ${currentAqi}</div>
+        <div style="padding-bottom: 10px;"><b>Predicted AQI:</b> Failed to load</div>
+        <div><b>Remarks:</b> ${backText}</div>
+      `;
+    });
 }
 
 
