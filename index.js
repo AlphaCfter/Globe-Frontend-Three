@@ -167,7 +167,7 @@ async function loadText() {
 async function loadLegend() {
   const infoDiv = document.createElement("div");
   infoDiv.style.position = "absolute";
-  infoDiv.style.top = "650px";
+  infoDiv.style.top = "550px";
   infoDiv.style.left = "30px";
   infoDiv.style.color = "white";
   infoDiv.style.fontFamily = "Roboto, sans-serif";
@@ -340,6 +340,7 @@ window.addEventListener("mousemove", (event) => {
 });
 
 // Raycast to detect intersections and show tooltip
+// Raycast to detect intersections and show tooltip
 function checkIntersections(event) {
   // Update the picking ray with the camera and mouse position
   raycaster.setFromCamera(mouse, camera);
@@ -360,7 +361,7 @@ function checkIntersections(event) {
 
   if (intersects.length > 0) {
     const intersected = intersects[0].object;
-    const { name, aqi } = intersected.userData;
+    const { name } = intersected.userData;
 
     // Highlight current marker if not already highlighted
     if (hoveredMarker !== intersected) {
@@ -368,15 +369,27 @@ function checkIntersections(event) {
       hoveredMarker = intersected;
     }
 
-    const predictedAqi = aqi;
-    showTooltip(name, event.clientX, event.clientY, predictedAqi);
+    // Fetch the predicted AQI for the city
+    fetch(`https://aqi-predictor-emt4.onrender.com/predict/?city=${name}`)
+      .then(response => response.json())
+      .then(data => {
+        const predictedAqi = data.predictedAqi; // Assuming the API returns a field named 'predictedAqi'
+        showTooltip(name, event.clientX, event.clientY, predictedAqi);
+      })
+      .catch(error => {
+        console.error('Error fetching predicted AQI:', error);
+        showTooltip(name, event.clientX, event.clientY, "N/A"); // In case of error, display "N/A"
+      });
   }
 }
+
 
 // Hide tooltip
 function hideTooltip() {
   const tooltip = document.getElementById("tooltip");
-  if (tooltip) tooltip.style.display = "none";
+  if (tooltip) {
+    tooltip.style.display = "none";
+  }
 }
 
 // Main render loop
