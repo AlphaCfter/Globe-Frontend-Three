@@ -1,7 +1,7 @@
 import * as THREE from "https://unpkg.com/three/build/three.module.js";
 
 console.error = function() {};
-const apiKey = process.env.API_KEY;
+const apiKey = '13e3aa3f23da810e017dc0bad2d529646730f4ed';
 // Scene, Camera, Renderer
 // Scene, Camera, Renderer
 const w = window.innerWidth;
